@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Government Member Verification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .slogan {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        /* CAPTCHA Box */
+        .captcha-container {
+            background: #fff;
+            border: 1px solid #dcdcdc;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            width: 300px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .captcha-container:hover {
+            box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+        }
+
+        .checkbox {
+            width: 25px;
+            height: 25px;
+            border: 2px solid #c0c0c0;
+            border-radius: 4px;
+            margin-right: 12px;
+            position: relative;
+            background: #fff;
+        }
+
+        .checkbox.checked {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+
+        .checkbox.checked::after {
+            content: '✔';
+            color: #fff;
+            font-weight: bold;
+            position: absolute;
+            top: 1px;
+            left: 5px;
+        }
+
+        .checkbox.invalid {
+            background: #f44336;
+            border-color: #f44336;
+        }
+
+        .checkbox.invalid::after {
+            content: '✗';
+            color: #fff;
+            font-weight: bold;
+            position: absolute;
+            top: 1px;
+            left: 5px;
+        }
+
+        .captcha-text {
+            flex-grow: 1;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .captcha-text.small {
+            font-size: 12px;
+        }
+
+        .captcha-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 10px;
+            color: #777;
+        }
+
+        .captcha-logo span:first-child {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .captcha-result {
+            margin-top: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: underline;
+        }
+
+        .captcha-result:hover {
+            color: #0056b3;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            padding: 25px;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .modal-counter {
+            font-size: 14px;
+            color: #666;
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+
+        .question-text {
+            font-size: 18px;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Style case à cocher */
+        .option {
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #fff;
+        }
+
+        .option:hover {
+            border-color: #bbb;
+            background-color: #f9f9f9;
+        }
+
+        .checkbox-option {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 2px solid #bbb;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .option.correct .checkbox-option {
+            border-color: #4CAF50;
+            background-color: #4CAF50;
+            color: #fff;
+        }
+
+        .option.incorrect .checkbox-option {
+            border-color: #f44336;
+            background-color: #f44336;
+            color: #fff;
+        }
+
+        .option.correct {
+            border-color: #4CAF50;
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        .option.incorrect {
+            border-color: #f44336;
+            background-color: rgba(244, 67, 54, 0.1);
+        }
+
+        .option-content {
+            flex-grow: 1;
+            font-size: 16px;
+        }
+
+        .result-container {
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .result-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-text {
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .success { color: #4CAF50; }
+        .failure { color: #f44336; }
+    
+.footer {
+    position: fixed;
+    bottom: 10px;
+    text-align: center;
+    width: 100%;
+    color: #888;
+    font-size: 14px;
+    font-style: italic;
+    letter-spacing: 0.5px;
+}
+    
+    </style>
+</head>
+<body>
+    <h1>Government Member Verification</h1>
+    <p class="slogan">"Tsy misy fiadanana ho an'ny ratsy fanahy"</p>
+
+    <!-- CAPTCHA BOX -->
+    <div class="captcha-container" id="captchaBox">
+        <div class="checkbox" id="captchaCheckbox"></div>
+        <div class="captcha-text" id="captchaText">Cliquer pour vérifier</div>
+        <div class="captcha-logo">
+            <span>GMV</span>
+            <span>verification</span>
+        </div>
+    </div>
+
+    <div class="captcha-result" id="captchaResult"></div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal"></div>
+    </div>
+
+    <script>
+        // Questions originales avec l'index de la bonne réponse
+        const originalQuestions = [
+            {
+                question: "Malagasy ve Andry Rajoelina ?",
+                options: [
+                    "Eny",
+                    "Tsia, Frantsay pr",
+                    "Sinoa",
+                    "Amerikanina"
+                ],
+                correct: 1
+            },
+            {
+                question: "An'iza i Madagascar ?",
+                options: [
+                    "An'i Jesosy",
+                    "An'i Ravatomanga",
+                    "An'i Malagasy",
+                    "An'i Jeneraly Bômba"
+                ],
+                correct: 2
+            },
+            {
+                question: "Asa natao-dRavatomanga?",
+                options: [
+                    "Prezida ny Repoblika",
+                    "Pasitera",
+                    "Mpandrara manao afera masiso",
+                    "dev back-end"
+                ],
+                correct: 2
+            },
+            {
+                question: "Ravatomanga placé en etat d'arrestation par la FCC le 24 Oct 2025?",
+                options: [
+                    "Eny",
+                    "Tsia"
+                ],
+                correct: 0
+            }  
+    
+        ];
+
+        let quizQuestions = [];
+        let currentModal = 0;
+        let userAnswers = [];
+        let quizCompleted = false;
+
+        const captchaBox = document.getElementById('captchaBox');
+        const captchaCheckbox = document.getElementById('captchaCheckbox');
+        const captchaText = document.getElementById('captchaText');
+        const captchaResult = document.getElementById('captchaResult');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modal = document.getElementById('modal');
+
+        // Fonction pour mélanger les options
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Préparer les questions avec les options mélangées
+        function prepareQuestions() {
+            quizQuestions = originalQuestions.map(q => {
+                // Créer un tableau d'objets avec l'option et son index original
+                const indexedOptions = q.options.map((option, index) => ({ option, originalIndex: index }));
+                
+                // Mélanger les options
+                const shuffledOptions = shuffleArray([...indexedOptions]);
+                
+                // Trouver le nouvel index de la bonne réponse
+                const newCorrectIndex = shuffledOptions.findIndex(item => item.originalIndex === q.correct);
+                
+                // Retourner la question avec les options mélangées
+                return {
+                    question: q.question,
+                    options: shuffledOptions.map(item => item.option),
+                    correct: newCorrectIndex
+                };
+            });
+        }
+
+        // Initialiser les questions mélangées
+        prepareQuestions();
+
+        captchaBox.addEventListener('click', () => {
+            if (!quizCompleted) {
+                // Réinitialiser le quiz si nécessaire
+                if (currentModal === 0 && userAnswers.length === 0) {
+                    prepareQuestions(); // Mélanger à nouveau les questions
+                }
+                openModal(currentModal);
+            }
+        });
+
+        function openModal(index) {
+            const q = quizQuestions[index];
+            modal.innerHTML = `
+                <div class="modal-header">
+                    <div class="modal-title">Vérification de membre</div>
+                    <div class="modal-counter">${index + 1}/4</div>
+                </div>
+                <div class="question-text">${q.question}</div>
+                <div class="options">
+                    ${q.options.map((opt, i) => `
+                        <div class="option" data-index="${i}">
+                            <div class="checkbox-option"></div>
+                            <div class="option-content">${opt}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            modalOverlay.classList.add('active');
+
+            modal.querySelectorAll('.option').forEach(opt => {
+                opt.addEventListener('click', handleAnswer);
+            });
+        }
+
+        function handleAnswer(e) {
+            const chosen = e.currentTarget;
+            const index = parseInt(chosen.dataset.index);
+            const correct = quizQuestions[currentModal].correct;
+
+            userAnswers[currentModal] = index === correct;
+
+            // Mettre à jour les icônes dans les carrés
+            const checkboxOption = chosen.querySelector('.checkbox-option');
+            if (index === correct) {
+                chosen.classList.add('correct');
+                checkboxOption.textContent = '✓';
+            } else {
+                chosen.classList.add('incorrect');
+                checkboxOption.textContent = '✗';
+                // Afficher aussi l'icône pour la bonne réponse
+                const correctOption = modal.querySelector(`.option[data-index="${correct}"]`);
+                correctOption.classList.add('correct');
+                correctOption.querySelector('.checkbox-option').textContent = '✓';
+            }
+
+            modal.querySelectorAll('.option').forEach(o => o.style.pointerEvents = 'none');
+
+            setTimeout(() => {
+                if (currentModal < quizQuestions.length - 1) {
+                    currentModal++;
+                    openModal(currentModal);
+                } else {
+                    showResults();
+                }
+            }, 1500);
+        }
+
+        function showResults() {
+            let correctCount = userAnswers.filter(Boolean).length;
+            let resultIcon, resultText, resultClass;
+
+            if (correctCount === 4) {
+                resultIcon = '✓'; 
+                resultText = 'Validé, tsy olon-dRavatomanga'; 
+                resultClass = 'success';
+            } else {
+                resultIcon = '✗'; 
+                resultText = 'Pas validé, olon-dRavatomanga'; 
+                resultClass = 'failure';
+            }
+
+            modal.innerHTML = `
+                <div class="result-container">
+                    <div class="result-icon ${resultClass}">${resultIcon}</div>
+                    <div class="result-text ${resultClass}">${resultText}</div>
+                    <div style="margin-top: 15px; color: #666;">Score: ${correctCount}/4 réponses correctes</div>
+                </div>
+            `;
+
+            // Mise à jour de l'apparence de la page d'accueil
+            if (correctCount === 4) {
+                captchaCheckbox.classList.add('checked');
+                captchaCheckbox.classList.remove('invalid');
+                captchaText.textContent = 'Validé, tsy olon-dRavatomanga';
+            } else {
+                captchaCheckbox.classList.add('invalid');
+                captchaCheckbox.classList.remove('checked');
+                captchaText.textContent = 'Pas validé, olon-dRavatomanga';
+            }
+            
+            // Réduire la taille de police et changer le texte
+            captchaText.classList.add('small');
+            captchaResult.innerHTML = 'Réessayer';
+            
+            // Ajouter l'événement pour recharger la page
+            captchaResult.onclick = function() {
+                location.reload();
+            };
+            
+            quizCompleted = true;
+            setTimeout(() => modalOverlay.classList.remove('active'), 3000);
+        }
+    </script>
+    
+<footer class="footer">
+    CAPTCHA by Manou
+</footer>
+    
+    
+</body>
+</html>
